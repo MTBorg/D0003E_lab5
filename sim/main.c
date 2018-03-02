@@ -37,26 +37,28 @@ void USARTInit();
 void *bridgeController();
 
 int COM1;
-/*unsigned char northLight, southLight;
-unsigned char northCars, southCars;
+unsigned char northLight, southLight;
+/*unsigned char northCars, southCars;
 unsigned char bridge;*/
 unsigned char lastGreenLight;
 
+#define THREADS_CAR 50
 sem_t bridge;
 //sem_t northCars, southCars, bridgeEntryNorth, bridgeEntrySouth;
-pthread_t northCars;
+	pthread_t northCars[THREADS_CAR];
+	pthread_t southCars[THREADS_CAR];
 
 int main() {
 	pthread_t keyboardThread;
 	pthread_t USARTReadThread;
 	pthread_t bridgeControllerThread;
 	unsigned char input;
+
 	
 	USARTInit();
-	//sem_init(&northCars, 0, 0);
-	//sem_init(&southCars, 0, 0);
 	//sem_init(&bridgeEntryNorth, 0, 0);
 	//sem_init(&bridgeEntrySouth, 0, 0);
+	sem_init(&bridge, 5, 0);
 	
 	// Create keyboard thread
 	if(pthread_create(&keyboardThread, NULL, &keyboard, NULL) != 0) {
@@ -191,7 +193,6 @@ void *bridgeController() {	// Handles the light signals and lets cars cross the 
 			bridge &= 0x1f; //Make sure only the first five bits remain valid
 			if((southCars > 0) && (southLight == GREEN)){
 				bridge |= 1 << 4;
-				southCars--;
 				USARTWrite(0b1000); //Signal to the avr that a southbound car has entered the bridge
 			}
 		}else if(lastGreenLight == NORTH){
@@ -199,7 +200,6 @@ void *bridgeController() {	// Handles the light signals and lets cars cross the 
 			bridge &= 0x1f; //Make sure only the first five bits remain valid
 			if((northCars > 0) && (northLight == GREEN)){
 				bridge |= 1;
-				northCars--;
 				USARTWrite(0b0010); //Signal to the avr that a northbound car has entered the bridge
 			}
 		}
