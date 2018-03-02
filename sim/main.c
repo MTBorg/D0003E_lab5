@@ -37,13 +37,14 @@ void USARTInit();
 void *bridgeController();
 
 int COM1;
-unsigned char northLight, southLight;
+/*unsigned char northLight, southLight;
 unsigned char northCars, southCars;
-unsigned char bridge;
+unsigned char bridge;*/
 unsigned char lastGreenLight;
 
-//sem_t bridge;
+sem_t bridge;
 //sem_t northCars, southCars, bridgeEntryNorth, bridgeEntrySouth;
+pthread_t northCars;
 
 int main() {
 	pthread_t keyboardThread;
