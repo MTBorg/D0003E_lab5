@@ -1,1 +1,3 @@
-.exe
+/sim/*.exe
+/sim/*.h.gch
+/sln/.vs/
