@@ -42,20 +42,12 @@ unsigned char northCars, southCars;
 unsigned char bridge;
 unsigned char lastGreenLight;
 
-//sem_t bridge;
-//sem_t northCars, southCars, bridgeEntryNorth, bridgeEntrySouth;
-
 int main() {
 	pthread_t keyboardThread;
 	pthread_t USARTReadThread;
 	pthread_t bridgeControllerThread;
-	unsigned char input;
 	
 	USARTInit();
-	//sem_init(&northCars, 0, 0);
-	//sem_init(&southCars, 0, 0);
-	//sem_init(&bridgeEntryNorth, 0, 0);
-	//sem_init(&bridgeEntrySouth, 0, 0);
 	
 	// Create keyboard thread
 	if(pthread_create(&keyboardThread, NULL, &keyboard, NULL) != 0) {
