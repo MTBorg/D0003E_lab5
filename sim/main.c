@@ -35,27 +35,30 @@ unsigned char USARTWrite(unsigned char writeBits);
 void *USARTRead();
 void USARTInit();
 void *bridgeController();
+pthread_t SpawnCar(unsigned char direction);
+void* CarDrive();
 
 int COM1;
 unsigned char northLight, southLight;
-unsigned char northCars, southCars;
-unsigned char bridge;
+/*unsigned char northCars, southCars;
+unsigned char bridge;*/
 unsigned char lastGreenLight;
 
-//sem_t bridge;
-//sem_t northCars, southCars, bridgeEntryNorth, bridgeEntrySouth;
+#define THREADS_CAR 50
+sem_t bridge;
+sem_t bridgeEntryNorth, bridgeEntrySouth;
 
 int main() {
 	pthread_t keyboardThread;
 	pthread_t USARTReadThread;
 	pthread_t bridgeControllerThread;
 	unsigned char input;
+
 	
 	USARTInit();
-	//sem_init(&northCars, 0, 0);
-	//sem_init(&southCars, 0, 0);
-	//sem_init(&bridgeEntryNorth, 0, 0);
-	//sem_init(&bridgeEntrySouth, 0, 0);
+	sem_init(&bridgeEntryNorth, 0, 1);
+	sem_init(&bridgeEntrySouth, 0, 1);
+	sem_init(&bridge, 0, 5);
 	
 	// Create keyboard thread
 	if(pthread_create(&keyboardThread, NULL, &keyboard, NULL) != 0) {
@@ -109,7 +112,7 @@ void *USARTRead() {
 		select(4, &rfds, NULL, NULL, NULL);
 		if(FD_ISSET(COM1, &rfds)) {
 				
-			clearTerminal();
+			//clearTerminal();
 			
 			if(read(COM1, &input, sizeof(char)) == -1) {
 				printf("Error on read");
@@ -125,11 +128,11 @@ void *USARTRead() {
 					bridge = 0;
 				}
 				
-				northLight = GREEN;
+				//northLight = GREEN;
 				lastGreenLight = NORTH;
 			} else {
 				//printf("Received north red light\n"); //DEBUG
-				northLight = RED;
+				//northLight = RED;
 			}
 			
 			if(input & 0x4) {	// southbound green light status
@@ -139,17 +142,17 @@ void *USARTRead() {
 				if(lastGreenLight != SOUTH){
 					bridge = 0;
 				}
-				southLight = GREEN;
+				//southLight = GREEN;
 				lastGreenLight = SOUTH;
 			} else {
 				//printf("Received south red light\n"); //DEBUG
-				southLight = RED;
+				//southLight = RED;
 			}
 
 			FD_ZERO(&rfds);
 			FD_SET(COM1, &rfds);
 			
-			displayBridge(southLight, northLight, southCars, northCars, bridge, lastGreenLight);
+			//displayBridge(southLight, northLight, southCars, northCars, bridge, lastGreenLight);
 		}
 	}
 }
@@ -166,13 +169,15 @@ void *keyboard() {
 		
 		if(keyboardInput == 'a') {	// Spawn car arriving on the south side of the bridge
 				int bytes = USARTWrite(0b0100);
+				SpawnCar(NORTH);
 				//printf("Wrote %d bytes to port %s \n", bytes, COM1FILE); //DEBUG
-				southCars++;
+				//southCars++;
 				
 		} else if(keyboardInput == 'd') { 	// Spawn car arriving on the north side of the bridge
 				int bytes = USARTWrite(0b001);
+				SpawnCar(SOUTH);
 				//printf("Wrote %d bytes to port %s \n", bytes, COM1FILE); //DEBUG
-				northCars++;
+				//northCars++;
 		}
 	}
 }
@@ -186,20 +191,22 @@ void *bridgeController() {	// Handles the light signals and lets cars cross the 
 		//printf("Bridge updating\n"); //DEBUG
 		
 		if(lastGreenLight == SOUTH){
+			
 			bridge = bridge >> (unsigned char)1; //Rotate the car symbols one step to the right (north)
 			bridge &= 0x1f; //Make sure only the first five bits remain valid
 			if((southCars > 0) && (southLight == GREEN)){
+				sem_wait(&bridgeEntrySouth);
 				bridge |= 1 << 4;
-				southCars--;
 				USARTWrite(0b1000); //Signal to the avr that a southbound car has entered the bridge
 			}
 		}else if(lastGreenLight == NORTH){
 			bridge = bridge << (unsigned char)1; //Rotate the car symbols one step to the left (south)
 			bridge &= 0x1f; //Make sure only the first five bits remain valid
 			if((northCars > 0) && (northLight == GREEN)){
+				sem_wait(&bridgeEntryNorth);
 				bridge |= 1;
-				northCars--;
 				USARTWrite(0b0010); //Signal to the avr that a northbound car has entered the bridge
+				sem_post(&bridgeEntryNorth);
 			}
 		}
 		
@@ -209,6 +216,38 @@ void *bridgeController() {	// Handles the light signals and lets cars cross the 
 		
 		
 		clock_t startTime = clock();
-		while(clock() - startTime <= CLOCKS_PER_SEC); //Wait for one second before checking again
+		while(clock() - startTime <= CLOCKS_PER_SEC); //Wait for one second before checking again*/
 	}
+}
+
+pthread_t SpawnCar(unsigned char direction){
+	pthread_t car; //This might be a problem because of local scope
+	pthread_create(&car, NULL, &CarDrive, (void*)direction);
+	return car;
+}
+
+void* CarDrive(void* direction){
+	
+	unsigned char dir = (unsigned char)direction;
+	
+	//The car enters the bridge
+	if(dir == SOUTH){
+		sem_wait(&bridgeEntrySouth);
+		USARTWrite(0b1000);
+		sem_post(&bridgeEntrySouth);
+	}else{
+		sem_wait(&bridgeEntryNorth);
+		USARTWrite(0b0010);
+		sem_post(&bridgeEntryNorth);
+	}
+
+		printf("Hello world");
+	
+	sem_wait(&bridge);	
+	//After five seconds the car has left the bridge
+	clock_t startTime = clock();
+	while(clock() - startTime <= 5 * CLOCKS_PER_SEC);
+	sem_post(&bridge);
+	
+	printf("awdhaiwuhdiauw");
 }

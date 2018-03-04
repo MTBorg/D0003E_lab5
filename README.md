@@ -1,2 +1,2 @@
 # D0003E_lab5
-(Förmodligen) färdig att redovisa. Använder inte semaforer.
+This branch is for experimenting with semaphores (WIP)
