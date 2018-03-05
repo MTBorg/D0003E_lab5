@@ -9,7 +9,6 @@
 //TODO
 // - The avr crashes when the keyboard is spammed (FIXED)
 // - When the lights are switched and all cars on the bridge have left, two cars are painted on the bridge (FIXED)
-// - Sending cars to the side that's red for the first time after starting the program does not make that side green
 
 #include <termios.h>
 #include <sys/types.h>
